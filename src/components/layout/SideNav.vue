@@ -10,6 +10,7 @@ import {
   Warning,
   Monitor,
   Setting,
+  Ticket,
 } from '@element-plus/icons-vue';
 
 const route = useRoute();
@@ -26,6 +27,7 @@ const groups: { label: string; items: NavItem[] }[] = [
     label: '用户与资产',
     items: [
       { label: '用户管理', path: '/users', icon: User },
+      { label: '邀请码管理', path: '/invite-codes', icon: Ticket },
       { label: '资产管理', path: '/assets', icon: PieChart },
     ],
   },

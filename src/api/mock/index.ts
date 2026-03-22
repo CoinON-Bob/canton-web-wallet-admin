@@ -25,6 +25,8 @@ const mockAddr = (seed: number) => {
   return `0x${base}`;
 };
 
+const invitePool = ['CC-WELCOME-2026', 'CC-PARTNER-DEMO', 'CC-BETA-INTERNAL'];
+
 export const users = Array.from({ length: 22 }).map((_, i) => ({
   id: 10001 + i,
   avatar: `https://api.dicebear.com/7.x/identicon/svg?seed=${10001 + i}`,
@@ -33,6 +35,8 @@ export const users = Array.from({ length: 22 }).map((_, i) => ({
   createdAt: `2026-03-${String((i % 28) + 1).padStart(2, '0')} 12:30`,
   asset: Number((1250000.5 - i * 6532.33).toFixed(2)),
   status: i % 3 === 0 ? 'pending' : i % 4 === 0 ? 'failed' : 'confirmed',
+  /** 注册时使用的邀请码（后台发放） */
+  inviteCode: invitePool[i % invitePool.length]!,
 }));
 
 export const transfers = Array.from({ length: 36 }).map((_, i) => ({

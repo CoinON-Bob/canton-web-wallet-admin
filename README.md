@@ -37,8 +37,8 @@ npm run deploy:prod
 ## 账号登录
 
 - 本项目为纯前端 Mock，无真实接口。
-- 登录页输入任意非空账号/密码即可进入。
-- 勾选记住密码后使用 `localStorage` 保持登录，否则使用 `sessionStorage`。
+- **管理员登录**：输入任意非空账号/密码即可进入后台；勾选记住密码后使用 `localStorage`，否则 `sessionStorage`。
+- **用户注册**：登录页切换到「用户注册」，必须填写后台 **邀请码管理** 中生成的有效邀请码；注册数据写入浏览器 `localStorage`，并在 **用户管理** 列表中展示（含所用邀请码）。用户不能自行生成邀请码。
 
 ## 目录结构
 
@@ -50,10 +50,11 @@ npm run deploy:prod
 
 ## 已实现页面
 
-- `/login` 登录
+- `/login` 管理员登录 / 用户注册（邀请码必填）
 - `/dashboard` 仪表盘
 - `/users` 用户管理
 - `/users/:id` 用户详情
+- `/invite-codes` 邀请码管理（生成次数、列表、作废）
 - `/assets` 资产管理
 - `/transfer/stats` 转账统计
 - `/transfer/list` 转账明细（含详情弹窗）

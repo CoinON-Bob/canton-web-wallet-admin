@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue';
-import { users, formatNumber } from '../api/mock';
+import { formatNumber } from '../api/mock';
+import { getAllUsers } from '../api/userDirectory';
 import { Search, ArrowRight } from '@element-plus/icons-vue';
 import { useRouter } from 'vue-router';
 
@@ -11,11 +12,14 @@ const currentPage = ref(1);
 const pageSize = ref(10);
 
 const filteredUsers = computed(() => {
-  let result = users;
+  let result = getAllUsers();
   if (searchQuery.value) {
     const q = searchQuery.value.toLowerCase();
     result = result.filter(
-      (u) => u.id.toString().includes(q) || u.email.toLowerCase().includes(q),
+      (u) =>
+        u.id.toString().includes(q) ||
+        u.email.toLowerCase().includes(q) ||
+        u.inviteCode.toLowerCase().includes(q),
     );
   }
   if (statusFilter.value === 'active') {
@@ -58,7 +62,7 @@ const maskEmail = (email: string) => {
         <div class="filter-group">
           <el-input
             v-model="searchQuery"
-            placeholder="搜索用户 ID / 邮箱"
+            placeholder="搜索用户 ID / 邮箱 / 邀请码"
             clearable
             :prefix-icon="Search"
             class="search-input"
@@ -84,6 +88,7 @@ const maskEmail = (email: string) => {
           <div class="user-meta">
             <div class="user-id">#{{ user.id }}</div>
             <div class="user-email font-mono">{{ maskEmail(user.email) }}</div>
+            <div class="user-invite font-mono">邀请码 {{ user.inviteCode }}</div>
           </div>
           <div :class="['user-status', user.status === 'confirmed' ? 'active' : 'inactive']">
             {{ user.status === 'confirmed' ? '启用' : '封禁' }}
@@ -230,6 +235,14 @@ const maskEmail = (email: string) => {
   font-size: 12px;
   color: #b8c5df;
   letter-spacing: 0.02em;
+}
+
+.user-invite {
+  font-size: 10px;
+  color: var(--gold);
+  margin-top: 4px;
+  letter-spacing: 0.04em;
+  opacity: 0.9;
 }
 
 .user-status {

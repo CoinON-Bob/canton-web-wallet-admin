@@ -28,6 +28,12 @@ const routes: RouteRecordRaw[] = [
         component: () => import('../views/UserDetailView.vue'),
       },
       {
+        path: 'invite-codes',
+        name: 'invite-codes',
+        meta: { title: '邀请码管理' },
+        component: () => import('../views/InviteCodesView.vue'),
+      },
+      {
         path: 'assets',
         name: 'assets',
         meta: { title: '资产管理' },

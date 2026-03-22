@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import { users, transfers, formatHash, formatNumber } from '../api/mock';
+import { transfers, formatHash, formatNumber } from '../api/mock';
+import { findUserById } from '../api/userDirectory';
 import StatusBadge from '../components/common/StatusBadge.vue';
 import { ArrowLeft, CopyDocument } from '@element-plus/icons-vue';
 import { ElMessage } from 'element-plus';
@@ -9,21 +10,35 @@ import { ElMessage } from 'element-plus';
 const route = useRoute();
 const router = useRouter();
 
-const user = computed(() => users.find((u) => String(u.id) === String(route.params.id)) || users[0]);
+const userIdParam = computed(() => {
+  const p = route.params.id;
+  return Array.isArray(p) ? p[0] : p;
+});
+
+const user = computed(() => (userIdParam.value ? findUserById(userIdParam.value) : undefined));
+
+const isInviteRegister = computed(
+  () => !!user.value && 'registerSource' in user.value && user.value.registerSource === 'invite',
+);
 
 /** 与列表一致：仅 confirmed 为启用，其余为封禁 */
-const userEnabled = computed(() => user.value.status === 'confirmed');
+const userEnabled = computed(() => user.value?.status === 'confirmed');
 
 const userTransfers = computed(() => {
+  if (!user.value) return [];
   const seed = Number(user.value.id) % 8;
   return transfers.slice(seed, seed + 10);
 });
 
-const assetRows = computed(() => [
-  { label: '主账户 · CC', amount: user.value.asset, frozen: 0, remark: '可用于转账与合约' },
-  { label: '合约保证金', amount: Number((user.value.asset * 0.08).toFixed(2)), frozen: Number((user.value.asset * 0.02).toFixed(2)), remark: '预测合约占用' },
-  { label: '理财子账户', amount: Number((user.value.asset * 0.05).toFixed(2)), frozen: 0, remark: 'Mock 演示' },
-]);
+const assetRows = computed(() => {
+  if (!user.value) return [];
+  const u = user.value;
+  return [
+    { label: '主账户 · CC', amount: u.asset, frozen: 0, remark: '可用于转账与合约' },
+    { label: '合约保证金', amount: Number((u.asset * 0.08).toFixed(2)), frozen: Number((u.asset * 0.02).toFixed(2)), remark: '预测合约占用' },
+    { label: '理财子账户', amount: Number((u.asset * 0.05).toFixed(2)), frozen: 0, remark: 'Mock 演示' },
+  ];
+});
 
 const auditLogs = [
   { time: '2026-03-22 09:18', action: '登录管理后台', ip: '10.12.0.44' },
@@ -38,7 +53,7 @@ const copy = (text: string) => {
 </script>
 
 <template>
-  <div class="user-detail">
+  <div v-if="user" class="user-detail">
     <div class="page-toolbar">
       <el-button class="back-btn" :icon="ArrowLeft" @click="router.push('/users')">返回用户列表</el-button>
     </div>
@@ -53,8 +68,10 @@ const copy = (text: string) => {
             <div :class="['user-status', userEnabled ? 'active' : 'inactive']">
               {{ userEnabled ? '启用' : '封禁' }}
             </div>
+            <el-tag v-if="isInviteRegister" size="small" type="warning" effect="plain">邀请注册</el-tag>
           </div>
           <div class="hero-email font-mono">{{ user.email }}</div>
+          <div class="hero-invite font-mono">注册邀请码 {{ user.inviteCode }}</div>
           <div class="hero-sub font-mono">注册于 {{ user.createdAt }}</div>
         </div>
         <div class="hero-balance">
@@ -76,6 +93,10 @@ const copy = (text: string) => {
               <span class="k">邮箱</span>
               <span class="v font-mono">{{ user.email }}</span>
             </div>
+            <div class="info-item wide">
+              <span class="k">注册邀请码</span>
+              <span class="v font-mono gold">{{ user.inviteCode }}</span>
+            </div>
             <div class="info-item">
               <span class="k">账号状态</span>
               <span class="v">
@@ -87,6 +108,10 @@ const copy = (text: string) => {
             <div class="info-item">
               <span class="k">注册时间</span>
               <span class="v font-mono">{{ user.createdAt }}</span>
+            </div>
+            <div class="info-item wide">
+              <span class="k">注册来源</span>
+              <span class="v dim">{{ isInviteRegister ? '前台邀请码注册' : '系统种子 / 导入数据（演示）' }}</span>
             </div>
             <div class="info-item wide">
               <span class="k">备注</span>
@@ -147,11 +172,24 @@ const copy = (text: string) => {
       </el-tabs>
     </el-card>
   </div>
+  <div v-else class="user-missing">
+    <el-empty description="未找到该用户" />
+    <el-button type="primary" @click="router.push('/users')">返回用户列表</el-button>
+  </div>
 </template>
 
 <style scoped>
 .user-detail {
   padding-bottom: 24px;
+}
+
+.user-missing {
+  padding: 48px 24px;
+  text-align: center;
+}
+
+.user-missing .el-button {
+  margin-top: 16px;
 }
 
 .page-toolbar {
@@ -220,6 +258,12 @@ const copy = (text: string) => {
 .hero-email {
   font-size: 15px;
   color: var(--text);
+}
+
+.hero-invite {
+  font-size: 12px;
+  color: var(--gold);
+  margin-top: 6px;
 }
 
 .hero-sub {

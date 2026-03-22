@@ -1,18 +1,20 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import { useRouter } from 'vue-router';
-import { users } from '../api/mock';
+import { getAllUsers } from '../api/userDirectory';
 import EChart from '../components/common/EChart.vue';
 
 const router = useRouter();
 
-const top10 = computed(() => [...users].sort((a, b) => b.asset - a.asset).slice(0, 10));
+const allUsers = computed(() => getAllUsers());
 
-const totalCc = computed(() => users.reduce((s, u) => s + u.asset, 0));
+const top10 = computed(() => [...allUsers.value].sort((a, b) => b.asset - a.asset).slice(0, 10));
+
+const totalCc = computed(() => allUsers.value.reduce((s, u) => s + u.asset, 0));
 
 const kpiCards = computed(() => [
   { title: '平台 CC 总量', value: totalCc.value.toLocaleString(undefined, { maximumFractionDigits: 0 }), sub: '所有用户主账户合计（Mock）' },
-  { title: '持仓用户数', value: String(users.length), sub: '当前演示数据集' },
+  { title: '持仓用户数', value: String(allUsers.value.length), sub: '含邀请码注册用户' },
   { title: '大户占比 (TOP10)', value: '38.2%', sub: '相对总锁仓估算' },
 ]);
 
@@ -124,7 +126,10 @@ const goUser = (id: number) => router.push(`/users/${id}`);
             <span class="col-id">
               <button type="button" class="id-btn font-mono" @click.stop="goUser(u.id)">#{{ u.id }}</button>
             </span>
-            <span class="col-email font-mono email-cell" :title="u.email">{{ u.email }}</span>
+            <span class="col-email">
+              <span class="email-cell font-mono" :title="u.email">{{ u.email }}</span>
+              <span class="invite-sub font-mono" :title="u.inviteCode">邀请 {{ u.inviteCode }}</span>
+            </span>
             <span class="col-bal font-mono gold">{{ u.asset.toLocaleString() }}</span>
           </div>
         </div>
@@ -314,9 +319,24 @@ const goUser = (id: number) => router.push(`/users/${id}`);
   color: #8b9cbb;
 }
 
+.col-email {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
 .email-cell {
   font-size: 12px;
   color: #b8c5df;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.invite-sub {
+  font-size: 10px;
+  color: rgba(201, 162, 39, 0.85);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
