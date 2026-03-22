@@ -77,11 +77,11 @@ const saveRules = () => {
                 <span class="alert-time font-mono">{{ ev.time }}</span>
               </div>
               <p class="alert-desc font-mono">{{ ev.desc }}</p>
-              <el-button size="small" class="alert-btn" type="primary" @click="openProcess(idx)">处理</el-button>
+              <el-button size="small" class="alert-btn" type="primary" plain @click="openProcess(idx)">处理</el-button>
             </div>
           </div>
         </el-card>
-        <el-button class="risk-link" link type="primary" @click="router.push('/transfer/list')">关联查看转账明细</el-button>
+        <el-button class="risk-link" text @click="router.push('/transfer/list')">关联查看转账明细</el-button>
       </el-col>
       <el-col :span="10">
         <el-card shadow="never">
@@ -175,7 +175,9 @@ const saveRules = () => {
 
 .risk-link {
   margin-top: 12px;
-  padding-left: 0 !important;
+  margin-left: 0 !important;
+  height: auto !important;
+  padding: 6px 0 !important;
 }
 
 .save-rules {

@@ -67,9 +67,9 @@ const doExport = () => {
   <div class="stats-page">
     <div class="page-header">
       <h1 class="page-title">CC 转账统计</h1>
-      <div class="actions">
+      <div class="page-header-actions">
         <el-button @click="showExport = true">导出报表</el-button>
-        <el-button type="primary" link @click="router.push('/transfer/list')">查看转账明细</el-button>
+        <el-button text @click="router.push('/transfer/list')">查看转账明细</el-button>
       </div>
     </div>
 
@@ -142,7 +142,7 @@ const doExport = () => {
   margin-bottom: 16px;
 }
 
-.actions {
+.page-header-actions {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;

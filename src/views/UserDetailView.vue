@@ -49,7 +49,7 @@ const copy = (text: string) => {
             <span class="hero-id font-mono">#{{ user.id }}</span>
             <StatusBadge :status="user.status" />
           </div>
-          <div class="hero-phone">{{ user.phone }}</div>
+          <div class="hero-email font-mono">{{ user.email }}</div>
           <div class="hero-sub font-mono">注册于 {{ user.createdAt }}</div>
         </div>
         <div class="hero-balance">
@@ -67,9 +67,9 @@ const copy = (text: string) => {
               <span class="k">用户 ID</span>
               <span class="v font-mono">{{ user.id }}</span>
             </div>
-            <div class="info-item">
-              <span class="k">手机号</span>
-              <span class="v">{{ user.phone }}</span>
+            <div class="info-item wide">
+              <span class="k">邮箱</span>
+              <span class="v font-mono">{{ user.email }}</span>
             </div>
             <div class="info-item">
               <span class="k">账号状态</span>
@@ -187,7 +187,7 @@ const copy = (text: string) => {
   color: var(--text);
 }
 
-.hero-phone {
+.hero-email {
   font-size: 15px;
   color: var(--text);
 }

@@ -14,9 +14,8 @@ const filteredUsers = computed(() => {
   let result = users;
   if (searchQuery.value) {
     const q = searchQuery.value.toLowerCase();
-    result = result.filter(u =>
-      u.id.toString().includes(q) ||
-      u.phone.includes(q)
+    result = result.filter(
+      (u) => u.id.toString().includes(q) || u.email.toLowerCase().includes(q),
     );
   }
   if (statusFilter.value) {
@@ -34,8 +33,14 @@ const viewDetail = (id: number) => {
   router.push(`/users/${String(id)}`);
 };
 
-const maskPhone = (phone: string) => {
-  return phone.replace(/(\d{3})\d{4}(\d{4})/, '$1****$2');
+/** 邮箱脱敏：ab***@domain */
+const maskEmail = (email: string) => {
+  const at = email.indexOf('@');
+  if (at <= 0) return email;
+  const local = email.slice(0, at);
+  const domain = email.slice(at + 1);
+  if (local.length <= 2) return `${local[0] ?? '*'}***@${domain}`;
+  return `${local.slice(0, 2)}***@${domain}`;
 };
 </script>
 
@@ -51,7 +56,7 @@ const maskPhone = (phone: string) => {
         <div class="filter-group">
           <el-input
             v-model="searchQuery"
-            placeholder="搜索用户ID / 手机号"
+            placeholder="搜索用户 ID / 邮箱"
             clearable
             :prefix-icon="Search"
             class="search-input"
@@ -76,7 +81,7 @@ const maskPhone = (phone: string) => {
           </div>
           <div class="user-meta">
             <div class="user-id">#{{ user.id }}</div>
-            <div class="user-phone">{{ maskPhone(user.phone) }}</div>
+            <div class="user-email font-mono">{{ maskEmail(user.email) }}</div>
           </div>
           <div :class="['user-status', user.status === 'confirmed' ? 'active' : 'inactive']">
             {{ user.status === 'confirmed' ? '启用' : '禁用' }}
@@ -219,10 +224,10 @@ const maskPhone = (phone: string) => {
   margin-bottom: 4px;
 }
 
-.user-phone {
-  font-size: 13px;
-  color: var(--text-dim);
-  font-family: 'Space Mono', monospace;
+.user-email {
+  font-size: 12px;
+  color: #b8c5df;
+  letter-spacing: 0.02em;
 }
 
 .user-status {

@@ -153,20 +153,41 @@ a {
   border-radius: 3px !important;
 }
 
-/* Primary: gold fill black text */
+/* Primary: gold fill — 深色字保证对比度 */
 .el-button--primary {
-  background: var(--gold) !important;
-  color: #000 !important;
+  background: linear-gradient(180deg, #d4af37, #c9a227) !important;
+  color: #0a0e1a !important;
   border: none !important;
   border-radius: 6px !important;
   font-size: 12px !important;
-  font-weight: 700 !important;
+  font-weight: 800 !important;
+  letter-spacing: 0.02em !important;
   padding: 9px 16px !important;
   transition: filter 0.15s ease, transform 0.15s ease !important;
 }
 
 .el-button--primary:hover {
-  filter: brightness(1.08);
+  filter: brightness(1.1);
+}
+
+/* 描边主按钮：浅底彩字，适合黄/橙 tinted 卡片上 */
+.el-button--primary.is-plain {
+  --el-button-bg-color: rgba(10, 14, 26, 0.85) !important;
+  --el-button-border-color: var(--gold) !important;
+  --el-button-text-color: #f0dc82 !important;
+  --el-button-hover-bg-color: rgba(201, 162, 39, 0.18) !important;
+  --el-button-hover-border-color: #f0dc82 !important;
+  --el-button-hover-text-color: #fff6d4 !important;
+  background: var(--el-button-bg-color) !important;
+  color: var(--el-button-text-color) !important;
+  border: 1px solid var(--gold) !important;
+  font-weight: 700 !important;
+}
+
+.el-button--primary.is-plain:hover {
+  background: var(--el-button-hover-bg-color) !important;
+  color: var(--el-button-hover-text-color) !important;
+  border-color: var(--el-button-hover-border-color) !important;
 }
 
 .el-button--default:not(.is-link) {
@@ -400,11 +421,45 @@ a {
   color: var(--text);
 }
 
-/* 链接按钮：主色金，避免默认蓝 */
+/* 链接按钮：浅字 + hover 金色，避免暗底上金色发糊 */
 .el-button.is-link {
-  color: var(--gold) !important;
+  color: #d4dff5 !important;
+  font-weight: 600 !important;
 }
 
 .el-button.is-link:hover {
-  color: #e0bc4c !important;
+  color: #f0dc82 !important;
+}
+
+/* type=primary 的 text/link：禁止沿用实心按钮的黑字 */
+.el-button.el-button--primary.is-link {
+  background: transparent !important;
+  border: none !important;
+  color: #dce8ff !important;
+  font-weight: 600 !important;
+}
+
+.el-button.el-button--primary.is-link:hover {
+  color: var(--gold) !important;
+}
+
+/* text 按钮（页面右上角常用） */
+.el-button.is-text {
+  color: #d4dff5 !important;
+  font-weight: 600 !important;
+}
+
+.el-button.is-text:hover {
+  color: var(--gold) !important;
+  background: rgba(255, 255, 255, 0.06) !important;
+}
+
+.page-header-actions .el-button.is-link,
+.page-header-actions .el-button.is-text {
+  color: #e8eef9 !important;
+}
+
+.page-header-actions .el-button.is-link:hover,
+.page-header-actions .el-button.is-text:hover {
+  color: var(--gold) !important;
 }

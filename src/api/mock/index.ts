@@ -28,7 +28,8 @@ const mockAddr = (seed: number) => {
 export const users = Array.from({ length: 22 }).map((_, i) => ({
   id: 10001 + i,
   avatar: `https://api.dicebear.com/7.x/identicon/svg?seed=${10001 + i}`,
-  phone: `1380000${String(1000 + i).slice(-4)}`,
+  /** 用户唯一对外标识之一（与 ID 并列） */
+  email: `user${10001 + i}@canton.mail`,
   createdAt: `2026-03-${String((i % 28) + 1).padStart(2, '0')} 12:30`,
   asset: Number((1250000.5 - i * 6532.33).toFixed(2)),
   status: i % 3 === 0 ? 'pending' : i % 4 === 0 ? 'failed' : 'confirmed',
@@ -105,3 +106,4 @@ export const formatAddress = (addr: string): string => {
 };
 
 export * from './contracts';
+export * from './transferGas';

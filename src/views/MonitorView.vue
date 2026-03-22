@@ -136,9 +136,9 @@ const curve = computed(() => ({
     </div>
 
     <el-card class="chart-wrap" shadow="never">
-      <div class="chart-head">
+      <div class="chart-head page-header-actions">
         <div class="chart-title">系统资源实时曲线</div>
-        <el-button type="primary" link @click="router.push('/dashboard')">返回总览</el-button>
+        <el-button text @click="router.push('/dashboard')">返回总览</el-button>
       </div>
       <EChart :option="curve" height="280px" />
     </el-card>

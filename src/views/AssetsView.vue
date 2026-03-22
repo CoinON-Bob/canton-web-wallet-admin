@@ -78,13 +78,17 @@ const distBar = computed(() => ({
     },
   ],
 }));
+
+const goUser = (id: number) => router.push(`/users/${id}`);
 </script>
 
 <template>
   <div class="assets-page">
     <div class="page-header">
       <h1 class="page-title">资产管理</h1>
-      <el-button type="primary" link @click="router.push('/users')">跳转用户管理</el-button>
+      <div class="page-header-actions">
+        <el-button class="header-action-btn" text @click="router.push('/users')">用户管理</el-button>
+      </div>
     </div>
 
     <div class="kpi-row">
@@ -103,22 +107,27 @@ const distBar = computed(() => ({
             <span class="hint font-mono">按 CC 余额</span>
           </div>
         </template>
-        <el-table :data="top10" stripe class="rank-table">
-          <el-table-column type="index" label="#" width="48" />
-          <el-table-column prop="id" label="用户 ID" width="100">
-            <template #default="s">
-              <el-button type="primary" link class="id-link" @click="router.push(`/users/${s.row.id}`)">
-                #{{ s.row.id }}
-              </el-button>
-            </template>
-          </el-table-column>
-          <el-table-column prop="phone" label="手机号" min-width="120" />
-          <el-table-column label="余额" min-width="140">
-            <template #default="s">
-              <span class="gold font-mono">{{ s.row.asset.toLocaleString() }} CC</span>
-            </template>
-          </el-table-column>
-        </el-table>
+        <div class="rank-sheet">
+          <div class="rank-row rank-row-head font-mono">
+            <span class="col-rank">#</span>
+            <span class="col-id">用户 ID</span>
+            <span class="col-email">邮箱</span>
+            <span class="col-bal">余额 (CC)</span>
+          </div>
+          <div
+            v-for="(u, idx) in top10"
+            :key="u.id"
+            class="rank-row rank-row-data"
+            @click="goUser(u.id)"
+          >
+            <span class="col-rank font-mono dim">{{ idx + 1 }}</span>
+            <span class="col-id">
+              <button type="button" class="id-btn font-mono" @click.stop="goUser(u.id)">#{{ u.id }}</button>
+            </span>
+            <span class="col-email font-mono email-cell" :title="u.email">{{ u.email }}</span>
+            <span class="col-bal font-mono gold">{{ u.asset.toLocaleString() }}</span>
+          </div>
+        </div>
       </el-card>
 
       <div class="charts-col">
@@ -160,6 +169,23 @@ const distBar = computed(() => ({
   justify-content: space-between;
   gap: 16px;
   margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+
+.page-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.header-action-btn {
+  color: #dce8ff !important;
+  font-weight: 600 !important;
+  font-size: 13px !important;
+}
+
+.header-action-btn:hover {
+  color: var(--gold) !important;
 }
 
 .kpi-row {
@@ -205,6 +231,10 @@ const distBar = computed(() => ({
   min-height: 0;
 }
 
+.rank-card :deep(.el-card__body) {
+  padding: 0 !important;
+}
+
 .card-h {
   display: flex;
   align-items: center;
@@ -232,9 +262,81 @@ const distBar = computed(() => ({
   min-height: 260px;
 }
 
-.id-link {
+/* 排行表：栅格对齐，与全局深色表风格一致 */
+.rank-sheet {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.rank-row {
+  display: grid;
+  grid-template-columns: 44px minmax(88px, 0.9fr) minmax(0, 1.4fr) minmax(120px, 1fr);
+  gap: 12px;
+  align-items: center;
+  padding: 12px 20px;
+  border-bottom: 1px solid rgba(30, 45, 74, 0.65);
+  font-size: 13px;
+}
+
+.rank-row-head {
+  padding-top: 14px;
+  padding-bottom: 10px;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  background: rgba(255, 255, 255, 0.02);
+  border-bottom: 1px solid var(--border);
+}
+
+.rank-row-data {
+  cursor: pointer;
+  color: var(--text);
+  transition: background 0.12s ease;
+}
+
+.rank-row-data:hover {
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.rank-row-data:last-child {
+  border-bottom: none;
+}
+
+.col-bal {
+  text-align: right;
+  font-weight: 700;
+}
+
+.dim {
+  color: #8b9cbb;
+}
+
+.email-cell {
+  font-size: 12px;
+  color: #b8c5df;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.id-btn {
+  border: none;
+  background: none;
   padding: 0;
-  font-family: 'Space Mono', monospace;
+  margin: 0;
+  cursor: pointer;
+  color: var(--gold);
+  font-size: 13px;
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.id-btn:hover {
+  color: #f0dc82;
 }
 
 @media (max-width: 1100px) {
@@ -244,6 +346,17 @@ const distBar = computed(() => ({
 
   .kpi-row {
     grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 720px) {
+  .rank-sheet {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .rank-row {
+    min-width: 520px;
   }
 }
 </style>

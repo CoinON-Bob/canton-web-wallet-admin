@@ -209,7 +209,7 @@ const poolBull = 62;
     <div class="middle-row">
       <el-card class="table-card">
         <template #header>
-          <div class="card-header">
+          <div class="card-header page-header-actions">
             <span class="card-title">最近转账记录</span>
             <el-button link type="primary" size="small" @click="goTransfers">查看全部</el-button>
           </div>
@@ -263,7 +263,7 @@ const poolBull = 62;
               :bull-label="`看涨 ${poolBull}% · 4.8M CC`"
               :bear-label="`看跌 ${100 - poolBull}% · 2.9M CC`"
             />
-            <div class="pool-actions">
+            <div class="pool-actions page-header-actions">
               <el-button link type="primary" size="small" @click="goContracts">进入预测合约管理</el-button>
             </div>
           </div>
@@ -312,7 +312,9 @@ const poolBull = 62;
                 <div class="progress-fill normal" style="width: 48.1%"></div>
               </div>
             </div>
-            <el-button class="health-link" link type="primary" size="small" @click="goMonitor">查看节点监控</el-button>
+            <div class="page-header-actions health-actions">
+              <el-button class="health-link" link type="primary" size="small" @click="goMonitor">查看节点监控</el-button>
+            </div>
           </div>
         </el-card>
       </div>
@@ -324,7 +326,7 @@ const poolBull = 62;
         <template #header>
           <div class="card-header">
             <span class="card-title">新增注册用户</span>
-            <div class="hdr-right">
+            <div class="hdr-right page-header-actions">
               <span class="card-subtitle">近30天</span>
               <el-button link type="primary" size="small" @click="goUsers">用户列表</el-button>
             </div>
@@ -337,7 +339,7 @@ const poolBull = 62;
         <template #header>
           <div class="card-header">
             <span class="card-title">合约方向分布</span>
-            <div class="hdr-right">
+            <div class="hdr-right page-header-actions">
               <span class="card-subtitle">近7天</span>
               <el-button link type="primary" size="small" @click="goContracts">合约详情</el-button>
             </div>
@@ -424,8 +426,11 @@ const poolBull = 62;
   text-align: right;
 }
 
-.health-link {
+.health-actions {
   margin-top: 12px;
+}
+
+.health-actions .health-link {
   padding-left: 0 !important;
 }
 

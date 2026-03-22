@@ -37,10 +37,10 @@ const openDetail = (row: ContractRound) => {
   <div class="contract-page">
     <div class="page-header">
       <h1 class="page-title">预测合约</h1>
-      <div class="header-actions">
+      <div class="header-actions page-header-actions">
         <el-button :icon="Document" @click="showRules = true">规则说明</el-button>
         <el-button type="primary" :icon="Cpu" @click="showSim = true">模拟结算</el-button>
-        <el-button link type="primary" @click="router.push('/dashboard')">返回总览</el-button>
+        <el-button text @click="router.push('/dashboard')">返回总览</el-button>
       </div>
     </div>
 
