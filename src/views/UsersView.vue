@@ -18,8 +18,10 @@ const filteredUsers = computed(() => {
       (u) => u.id.toString().includes(q) || u.email.toLowerCase().includes(q),
     );
   }
-  if (statusFilter.value) {
-    result = result.filter(u => u.status === statusFilter.value);
+  if (statusFilter.value === 'active') {
+    result = result.filter((u) => u.status === 'confirmed');
+  } else if (statusFilter.value === 'banned') {
+    result = result.filter((u) => u.status !== 'confirmed');
   }
   return result;
 });
@@ -62,8 +64,8 @@ const maskEmail = (email: string) => {
             class="search-input"
           />
           <el-select v-model="statusFilter" placeholder="全部状态" clearable class="status-select">
-            <el-option label="启用" value="confirmed" />
-            <el-option label="禁用" value="pending" />
+            <el-option label="启用" value="active" />
+            <el-option label="封禁" value="banned" />
           </el-select>
         </div>
         <div class="filter-stats">
@@ -84,7 +86,7 @@ const maskEmail = (email: string) => {
             <div class="user-email font-mono">{{ maskEmail(user.email) }}</div>
           </div>
           <div :class="['user-status', user.status === 'confirmed' ? 'active' : 'inactive']">
-            {{ user.status === 'confirmed' ? '启用' : '禁用' }}
+            {{ user.status === 'confirmed' ? '启用' : '封禁' }}
           </div>
         </div>
 

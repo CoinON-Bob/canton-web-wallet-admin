@@ -11,6 +11,9 @@ const router = useRouter();
 
 const user = computed(() => users.find((u) => String(u.id) === String(route.params.id)) || users[0]);
 
+/** 与列表一致：仅 confirmed 为启用，其余为封禁 */
+const userEnabled = computed(() => user.value.status === 'confirmed');
+
 const userTransfers = computed(() => {
   const seed = Number(user.value.id) % 8;
   return transfers.slice(seed, seed + 10);
@@ -47,7 +50,9 @@ const copy = (text: string) => {
         <div class="hero-main">
           <div class="hero-top">
             <span class="hero-id font-mono">#{{ user.id }}</span>
-            <StatusBadge :status="user.status" />
+            <div :class="['user-status', userEnabled ? 'active' : 'inactive']">
+              {{ userEnabled ? '启用' : '封禁' }}
+            </div>
           </div>
           <div class="hero-email font-mono">{{ user.email }}</div>
           <div class="hero-sub font-mono">注册于 {{ user.createdAt }}</div>
@@ -73,7 +78,11 @@ const copy = (text: string) => {
             </div>
             <div class="info-item">
               <span class="k">账号状态</span>
-              <span class="v"><StatusBadge :status="user.status" /></span>
+              <span class="v">
+                <span :class="['user-status', userEnabled ? 'active' : 'inactive']">
+                  {{ userEnabled ? '启用' : '封禁' }}
+                </span>
+              </span>
             </div>
             <div class="info-item">
               <span class="k">注册时间</span>
@@ -177,7 +186,8 @@ const copy = (text: string) => {
 .hero-top {
   display: flex;
   align-items: center;
-  gap: 12px;
+  flex-wrap: wrap;
+  gap: 10px;
   margin-bottom: 6px;
 }
 
@@ -185,6 +195,26 @@ const copy = (text: string) => {
   font-size: 18px;
   font-weight: 700;
   color: var(--text);
+}
+
+/* 与用户列表卡片角标一致 */
+.user-status {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.user-status.active {
+  background: rgba(0, 212, 177, 0.12);
+  color: var(--teal);
+}
+
+.user-status.inactive {
+  background: rgba(255, 77, 109, 0.12);
+  color: var(--red);
 }
 
 .hero-email {

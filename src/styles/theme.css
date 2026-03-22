@@ -87,6 +87,11 @@ a {
   --el-table-text-color: var(--text);
   --el-table-header-text-color: var(--text-dim);
   --el-table-border-color: var(--border);
+  /* 斑马纹 / hover / 当前行：禁止沿用默认浅色（否则出现白条） */
+  --el-fill-color-lighter: rgba(255, 255, 255, 0.055);
+  --el-fill-color-light: rgba(255, 255, 255, 0.07);
+  --el-table-row-hover-bg-color: rgba(255, 255, 255, 0.06);
+  --el-table-current-row-bg-color: rgba(201, 162, 39, 0.14);
   font-size: 13px;
 }
 
@@ -118,6 +123,28 @@ a {
   border-bottom: 1px solid rgba(30, 45, 74, 0.5) !important;
   color: var(--text);
   font-size: 13px;
+  background-color: var(--bg-card) !important;
+}
+
+/* 斑马纹行（显式覆盖，避免部分构建下变量未生效） */
+.el-table--striped .el-table__body tr.el-table__row--striped > td.el-table__cell {
+  background-color: rgba(255, 255, 255, 0.045) !important;
+}
+
+.el-table__empty-block {
+  background-color: var(--bg-card) !important;
+}
+
+.el-table__empty-text {
+  color: var(--text-dim) !important;
+}
+
+.el-table__body tr.current-row > td.el-table__cell {
+  background-color: rgba(201, 162, 39, 0.14) !important;
+}
+
+.el-table__inner-wrapper::before {
+  background-color: transparent !important;
 }
 
 .el-input__wrapper,
