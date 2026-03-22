@@ -22,6 +22,8 @@ npm run preview
 
 **推荐（全自动）**：在 [Vercel Dashboard](https://vercel.com) 把本仓库 **Import** 进项目并关联 GitHub。之后每次 `git push` 到生产分支会自动构建部署，**无需 CLI、无需在聊天里发 Token**。
 
+**刷新子路径 404？** 本项目为 Vue SPA（History 模式）。部署后若直接打开或刷新 `/users` 等非根路径，需让服务器回退到 `index.html`。仓库根目录已包含 `vercel.json` 的 `rewrites` 配置；其他平台（Nginx、Netlify 等）也需同样「全部回退到 index.html」的规则。
+
 **CLI（本机一条命令）**：不要把 Token 写进仓库或发给别人。在本机配置一次环境变量即可：
 
 ```bash
