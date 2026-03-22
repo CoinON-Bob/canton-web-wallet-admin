@@ -15,7 +15,7 @@ const totalCc = computed(() => allUsers.value.reduce((s, u) => s + u.asset, 0));
 const kpiCards = computed(() => [
   { title: '平台 CC 总量', value: totalCc.value.toLocaleString(undefined, { maximumFractionDigits: 0 }), sub: '所有用户主账户合计（Mock）' },
   { title: '持仓用户数', value: String(allUsers.value.length), sub: '含邀请码注册用户' },
-  { title: '大户占比 (TOP10)', value: '38.2%', sub: '相对总锁仓估算' },
+  { title: '大户占比 (TOP10)', value: '38.2%', sub: '相对总持有估算' },
 ]);
 
 const chartTooltip = {

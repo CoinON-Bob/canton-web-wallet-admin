@@ -8,7 +8,7 @@ export const dashboardKpis: {
   variant?: KpiVariant;
 }[] = [
   {
-    title: '平台总 CC 锁仓量',
+    title: '平台总 CC 持有量',
     value: '482,310,000',
     trend: '+2.4%',
     subline: '≈ $12,057,750 USDT',
