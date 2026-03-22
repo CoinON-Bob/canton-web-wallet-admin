@@ -18,6 +18,22 @@ npm run build
 npm run preview
 ```
 
+## 部署到 Vercel
+
+**推荐（全自动）**：在 [Vercel Dashboard](https://vercel.com) 把本仓库 **Import** 进项目并关联 GitHub。之后每次 `git push` 到生产分支会自动构建部署，**无需 CLI、无需在聊天里发 Token**。
+
+**CLI（本机一条命令）**：不要把 Token 写进仓库或发给别人。在本机配置一次环境变量即可：
+
+```bash
+# ~/.zshrc 等（仅本机）
+export VERCEL_TOKEN="你的_token"
+
+cd canton-web-wallet-admin
+npm run deploy:prod
+```
+
+`npm run deploy:prod` 会执行 `build` + `npx vercel --prod --yes`，CLI 会读取环境变量中的 `VERCEL_TOKEN`。
+
 ## 账号登录
 
 - 本项目为纯前端 Mock，无真实接口。
