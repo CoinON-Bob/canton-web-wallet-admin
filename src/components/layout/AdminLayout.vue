@@ -19,9 +19,9 @@ const pageTitle = computed(() => {
   return '总览仪表盘';
 });
 
-const logout = () => {
-  auth.logout();
-  router.push('/login');
+const logout = async () => {
+  await auth.logout();
+  await router.push('/login');
 };
 
 const refresh = () => {

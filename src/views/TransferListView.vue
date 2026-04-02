@@ -1,9 +1,14 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue';
+import { ref, computed, watch, onMounted } from 'vue';
 import { transfers, formatHash, formatNumber, formatAddress } from '../api/mock';
 import StatusBadge from '../components/common/StatusBadge.vue';
 import { CopyDocument, Search } from '@element-plus/icons-vue';
 import { ElMessage } from 'element-plus';
+import { adminTransactionApi } from '../api/admin';
+import { extractPageRows, pickColumns } from '../api/listUtils';
+import { ApiError } from '../api/http';
+
+const useMock = import.meta.env.VITE_USE_ADMIN_MOCK_DATA === 'true';
 
 const searchQuery = ref('');
 const statusFilter = ref('');
@@ -19,14 +24,15 @@ const filteredTransfers = computed(() => {
   let result = transfers;
   if (searchQuery.value) {
     const q = searchQuery.value.toLowerCase();
-    result = result.filter(t =>
-      t.hash.toLowerCase().includes(q) ||
-      t.from.toLowerCase().includes(q) ||
-      t.to.toLowerCase().includes(q)
+    result = result.filter(
+      (t) =>
+        t.hash.toLowerCase().includes(q) ||
+        t.from.toLowerCase().includes(q) ||
+        t.to.toLowerCase().includes(q)
     );
   }
   if (statusFilter.value) {
-    result = result.filter(t => t.status === statusFilter.value);
+    result = result.filter((t) => t.status === statusFilter.value);
   }
   return result;
 });
@@ -37,12 +43,76 @@ const paginatedTransfers = computed(() => {
 });
 
 const showDetail = ref(false);
-const selectedTx = ref<typeof transfers[0] | null>(null);
+const selectedTx = ref<(typeof transfers)[0] | null>(null);
 
-const viewDetail = (tx: typeof transfers[0]) => {
+const viewDetail = (tx: (typeof transfers)[0]) => {
   selectedTx.value = tx;
   showDetail.value = true;
 };
+
+const liveLoading = ref(false);
+const liveError = ref('');
+const liveRows = ref<Record<string, unknown>[]>([]);
+const liveTotal = ref(0);
+const liveColumns = computed(() => pickColumns(liveRows.value, 12));
+
+const showLiveDetail = ref(false);
+const selectedLive = ref<Record<string, unknown> | null>(null);
+
+async function fetchLiveList() {
+  liveLoading.value = true;
+  liveError.value = '';
+  try {
+    const res = await adminTransactionApi.list({
+      page: currentPage.value,
+      page_size: pageSize.value,
+      keyword: searchQuery.value.trim() || undefined,
+      include_raw: 0,
+    });
+    const { rows, total } = extractPageRows(res.data);
+    liveRows.value = rows;
+    liveTotal.value = total;
+  } catch (e) {
+    liveError.value = e instanceof ApiError ? e.message : String(e);
+    liveRows.value = [];
+    liveTotal.value = 0;
+  } finally {
+    liveLoading.value = false;
+  }
+}
+
+function cellStr(row: Record<string, unknown>, key: string) {
+  const v = row[key];
+  if (v == null) return '—';
+  if (typeof v === 'object') return JSON.stringify(v).slice(0, 120);
+  return String(v);
+}
+
+function viewDetailLive(row: Record<string, unknown>) {
+  selectedLive.value = row;
+  showLiveDetail.value = true;
+}
+
+let searchDebounce: ReturnType<typeof setTimeout> | null = null;
+
+watch([currentPage, pageSize], () => {
+  if (!useMock) void fetchLiveList();
+});
+
+watch(searchQuery, () => {
+  if (useMock) return;
+  if (searchDebounce) clearTimeout(searchDebounce);
+  searchDebounce = setTimeout(() => {
+    currentPage.value = 1;
+    void fetchLiveList();
+  }, 400);
+});
+
+onMounted(() => {
+  if (!useMock) void fetchLiveList();
+});
+
+const totalRecords = computed(() => (useMock ? filteredTransfers.value.length : liveTotal.value));
 </script>
 
 <template>
@@ -51,32 +121,51 @@ const viewDetail = (tx: typeof transfers[0]) => {
       <h1 class="page-title">转账明细</h1>
     </div>
 
+    <el-alert
+      v-if="!useMock"
+      type="info"
+      :closable="false"
+      class="live-banner"
+      title="已对接 GET /admin/transaction/list（keyword 对应文档「关键字」筛选）。列字段随后端 data 结构自动展示。"
+    />
+
     <!-- Filter Bar -->
     <el-card class="filter-card">
       <div class="filter-row">
         <div class="filter-group">
           <el-input
             v-model="searchQuery"
-            placeholder="搜索交易哈希 / 地址"
+            :placeholder="useMock ? '搜索交易哈希 / 地址' : 'keyword：事件ID / party / CID 等'"
             clearable
             :prefix-icon="Search"
             class="search-input"
           />
-          <el-select v-model="statusFilter" placeholder="全部状态" clearable class="status-select">
+          <el-select
+            v-if="useMock"
+            v-model="statusFilter"
+            placeholder="全部状态"
+            clearable
+            class="status-select"
+          >
             <el-option label="已确认" value="confirmed" />
             <el-option label="待确认" value="pending" />
             <el-option label="失败" value="failed" />
           </el-select>
         </div>
         <div class="filter-stats">
-          共 <span class="highlight">{{ filteredTransfers.length }}</span> 条记录
+          共 <span class="highlight">{{ totalRecords }}</span> 条记录
+          <template v-if="!useMock">
+            <el-button text type="primary" class="refresh-live" @click="fetchLiveList">刷新</el-button>
+          </template>
         </div>
       </div>
     </el-card>
 
+    <el-alert v-if="!useMock && liveError" type="error" :title="liveError" :closable="false" class="err-banner" />
+
     <!-- Data Table -->
     <el-card class="table-card">
-      <div class="table-wrapper">
+      <div v-if="useMock" class="table-wrapper">
         <table class="custom-table">
           <thead>
             <tr>
@@ -94,19 +183,19 @@ const viewDetail = (tx: typeof transfers[0]) => {
             <tr v-for="tx in paginatedTransfers" :key="tx.hash">
               <td class="hash-cell">
                 <span class="hash-text" :title="tx.hash">{{ formatHash(tx.hash) }}</span>
-                <button class="icon-btn" @click="copyText(tx.hash)">
+                <button type="button" class="icon-btn" @click="copyText(tx.hash)">
                   <CopyDocument class="icon-sm" />
                 </button>
               </td>
               <td class="address-cell">
                 <span class="address-text">{{ formatAddress(tx.from) }}</span>
-                <button class="icon-btn" @click="copyText(tx.from)">
+                <button type="button" class="icon-btn" @click="copyText(tx.from)">
                   <CopyDocument class="icon-sm" />
                 </button>
               </td>
               <td class="address-cell">
                 <span class="address-text">{{ formatAddress(tx.to) }}</span>
-                <button class="icon-btn" @click="copyText(tx.to)">
+                <button type="button" class="icon-btn" @click="copyText(tx.to)">
                   <CopyDocument class="icon-sm" />
                 </button>
               </td>
@@ -117,11 +206,36 @@ const viewDetail = (tx: typeof transfers[0]) => {
               </td>
               <td class="time-cell">{{ tx.time }}</td>
               <td>
-                <button class="action-link" @click="viewDetail(tx)">查看</button>
+                <button type="button" class="action-link" @click="viewDetail(tx)">查看</button>
               </td>
             </tr>
           </tbody>
         </table>
+      </div>
+
+      <div v-else v-loading="liveLoading" class="live-table-wrap">
+        <el-table v-if="liveRows.length" :data="liveRows" stripe border class="live-table" size="small">
+          <el-table-column
+            v-for="col in liveColumns"
+            :key="col"
+            :prop="col"
+            :label="col"
+            min-width="120"
+            show-overflow-tooltip
+          >
+            <template #default="{ row }">
+              <span class="live-cell">{{ cellStr(row as Record<string, unknown>, col) }}</span>
+            </template>
+          </el-table-column>
+          <el-table-column label="操作" width="80" fixed="right">
+            <template #default="{ row }">
+              <button type="button" class="action-link" @click="viewDetailLive(row as Record<string, unknown>)">
+                查看
+              </button>
+            </template>
+          </el-table-column>
+        </el-table>
+        <p v-else-if="!liveLoading" class="empty-live font-mono">暂无数据或列表字段与解析规则不匹配，请用「API 调试」查看原始响应。</p>
       </div>
 
       <!-- Pagination -->
@@ -129,7 +243,7 @@ const viewDetail = (tx: typeof transfers[0]) => {
         <el-pagination
           v-model:current-page="currentPage"
           v-model:page-size="pageSize"
-          :total="filteredTransfers.length"
+          :total="totalRecords"
           :page-sizes="[10, 20, 50]"
           layout="total, sizes, prev, pager, next"
           background
@@ -150,7 +264,7 @@ const viewDetail = (tx: typeof transfers[0]) => {
           <span class="detail-label">交易哈希</span>
           <div class="detail-value">
             <span class="mono">{{ selectedTx.hash }}</span>
-            <button class="icon-btn" @click="copyText(selectedTx.hash)">
+            <button type="button" class="icon-btn" @click="copyText(selectedTx.hash)">
               <CopyDocument class="icon-sm" />
             </button>
           </div>
@@ -165,7 +279,7 @@ const viewDetail = (tx: typeof transfers[0]) => {
           <span class="detail-label">发送方</span>
           <div class="detail-value">
             <span class="mono">{{ selectedTx.from }}</span>
-            <button class="icon-btn" @click="copyText(selectedTx.from)">
+            <button type="button" class="icon-btn" @click="copyText(selectedTx.from)">
               <CopyDocument class="icon-sm" />
             </button>
           </div>
@@ -175,7 +289,7 @@ const viewDetail = (tx: typeof transfers[0]) => {
           <span class="detail-label">接收方</span>
           <div class="detail-value">
             <span class="mono">{{ selectedTx.to }}</span>
-            <button class="icon-btn" @click="copyText(selectedTx.to)">
+            <button type="button" class="icon-btn" @click="copyText(selectedTx.to)">
               <CopyDocument class="icon-sm" />
             </button>
           </div>
@@ -197,12 +311,52 @@ const viewDetail = (tx: typeof transfers[0]) => {
         </div>
       </div>
     </el-dialog>
+
+    <el-dialog
+      v-model="showLiveDetail"
+      title="交易详情（接口原始字段）"
+      width="640px"
+      :close-on-click-modal="false"
+    >
+      <pre v-if="selectedLive" class="live-json font-mono">{{ JSON.stringify(selectedLive, null, 2) }}</pre>
+    </el-dialog>
   </div>
 </template>
 
 <style scoped>
 .transfer-list {
   padding-bottom: 24px;
+}
+
+.live-banner {
+  margin-bottom: 12px;
+}
+
+.err-banner {
+  margin-bottom: 12px;
+}
+
+.live-table-wrap {
+  min-height: 120px;
+  padding: 0 0 8px;
+}
+
+.empty-live {
+  margin: 24px 20px;
+  font-size: 12px;
+  color: var(--text-dim);
+}
+
+.live-json {
+  margin: 0;
+  max-height: 480px;
+  overflow: auto;
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+.refresh-live {
+  margin-left: 12px;
 }
 
 .page-header {

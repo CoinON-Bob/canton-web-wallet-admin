@@ -3,6 +3,7 @@ import { reactive, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { useAuthStore } from '../store/auth';
 import { ElMessage } from 'element-plus';
+import { ApiError } from '../api/http';
 
 const router = useRouter();
 const auth = useAuthStore();
@@ -13,7 +14,7 @@ const form = reactive({ username: '', password: '', remember: true });
 const quickFill = () => {
   form.username = 'demo_admin';
   form.password = 'Canton@2026';
-  ElMessage.success('已填充演示账号');
+  ElMessage.success('已填充演示账号（仍需正确后端密码，或开启 VITE_USE_MOCK_ADMIN_AUTH）');
 };
 
 const onSubmit = async () => {
@@ -22,10 +23,16 @@ const onSubmit = async () => {
     return;
   }
   loading.value = true;
-  await new Promise((r) => setTimeout(r, 500));
-  auth.login(form.remember, form.username);
-  loading.value = false;
-  router.push('/dashboard');
+  try {
+    await auth.loginWithPassword(form.remember, form.username, form.password);
+    ElMessage.success('登录成功');
+    await router.push('/dashboard');
+  } catch (e) {
+    const msg = e instanceof ApiError ? e.message : e instanceof Error ? e.message : '登录失败';
+    ElMessage.error(msg);
+  } finally {
+    loading.value = false;
+  }
 };
 </script>
 
@@ -85,7 +92,9 @@ const onSubmit = async () => {
           <button type="button" class="ghost-fill" @click="quickFill">使用演示账号</button>
         </el-form>
       </el-card>
-      <p class="login-foot font-mono">演示环境 · Mock 数据</p>
+      <p class="login-foot font-mono">
+        POST /admin/login · 默认 /api 走 Vite 代理
+      </p>
     </div>
   </div>
 </template>

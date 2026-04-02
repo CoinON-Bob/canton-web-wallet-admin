@@ -1,8 +1,10 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue';
+import { ref, computed, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import EChart from '../components/common/EChart.vue';
 import { ElMessage } from 'element-plus';
+import { adminTransactionApi } from '../api/admin';
+import { ApiError } from '../api/http';
 
 const router = useRouter();
 
@@ -61,6 +63,52 @@ const doExport = () => {
   ElMessage.success(`已生成 ${exportFormat.value.toUpperCase()}（${exportRange.value}）下载任务 — Mock`);
   showExport.value = false;
 };
+
+const apiTab = ref<'ov' | 'tr' | 'tu'>('ov');
+const apiLoading = ref(false);
+const syncLoading = ref(false);
+const apiErr = ref('');
+const overviewJson = ref('');
+const trendJson = ref('');
+const topUsersJson = ref('');
+
+async function loadTxStats() {
+  apiLoading.value = true;
+  apiErr.value = '';
+  try {
+    const [o, t, u] = await Promise.all([
+      adminTransactionApi.statsOverview({ days: 7, latest_limit: 10 }),
+      adminTransactionApi.statsTrend({ days: 7 }),
+      adminTransactionApi.statsTopUsers({ days: 7, limit: 10, sort_by: 'amount' }),
+    ]);
+    overviewJson.value = JSON.stringify(o, null, 2);
+    trendJson.value = JSON.stringify(t, null, 2);
+    topUsersJson.value = JSON.stringify(u, null, 2);
+  } catch (e) {
+    apiErr.value = e instanceof ApiError ? e.message : String(e);
+  } finally {
+    apiLoading.value = false;
+  }
+}
+
+async function runSync() {
+  syncLoading.value = true;
+  apiErr.value = '';
+  try {
+    const r = await adminTransactionApi.sync({});
+    ElMessage.success(r.msg || '同步请求已提交');
+    await loadTxStats();
+  } catch (e) {
+    apiErr.value = e instanceof ApiError ? e.message : String(e);
+    ElMessage.error(apiErr.value);
+  } finally {
+    syncLoading.value = false;
+  }
+}
+
+onMounted(() => {
+  void loadTxStats();
+});
 </script>
 
 <template>
@@ -103,6 +151,33 @@ const doExport = () => {
         <EChart :option="typePie" height="300px" />
       </el-card>
     </div>
+
+    <el-card shadow="never" class="api-card">
+      <template #header>
+        <div class="card-h">
+          <span>接口数据（文档 Admin Transaction）</span>
+          <div class="api-actions">
+            <el-button size="small" :loading="apiLoading" @click="loadTxStats">刷新 JSON</el-button>
+            <el-button size="small" type="primary" :loading="syncLoading" @click="runSync">POST 同步</el-button>
+          </div>
+        </div>
+      </template>
+      <p class="api-note font-mono">
+        overview / trend / top-users / sync；上方图表仍为本地 Mock，待后端字段稳定后可绑定图表。
+      </p>
+      <el-alert v-if="apiErr" :title="apiErr" type="error" class="api-err" :closable="false" />
+      <el-tabs v-model="apiTab">
+        <el-tab-pane label="stats/overview" name="ov">
+          <pre class="json-block font-mono">{{ overviewJson || '—' }}</pre>
+        </el-tab-pane>
+        <el-tab-pane label="stats/trend" name="tr">
+          <pre class="json-block font-mono">{{ trendJson || '—' }}</pre>
+        </el-tab-pane>
+        <el-tab-pane label="stats/top-users" name="tu">
+          <pre class="json-block font-mono">{{ topUsersJson || '—' }}</pre>
+        </el-tab-pane>
+      </el-tabs>
+    </el-card>
 
     <el-dialog v-model="showExport" title="导出报表" width="400px" destroy-on-close>
       <el-form label-position="top">
@@ -198,5 +273,37 @@ const doExport = () => {
   .kpi-row {
     grid-template-columns: 1fr;
   }
+}
+
+.api-card {
+  margin-top: 16px;
+  border-radius: 8px;
+}
+
+.api-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.api-note {
+  margin: 0 0 12px;
+  font-size: 11px;
+  color: var(--text-dim);
+  line-height: 1.5;
+}
+
+.api-err {
+  margin-bottom: 12px;
+}
+
+.json-block {
+  margin: 0;
+  max-height: min(420px, 50vh);
+  overflow: auto;
+  font-size: 11px;
+  line-height: 1.45;
+  white-space: pre-wrap;
+  word-break: break-word;
 }
 </style>
