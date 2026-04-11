@@ -5,10 +5,12 @@ import EChart from '../components/common/EChart.vue';
 import { ElMessage } from 'element-plus';
 import { adminTransactionApi } from '../api/admin';
 import { ApiError } from '../api/http';
+import type { ApiEnvelope } from '../api/http';
+import { parseOverviewKpis, parsePieFromOverview, parsePieFromTopUsers, parseTrendLineSeries } from '../api/txStatsChart';
 
 const router = useRouter();
 
-const trend = computed(() => ({
+const trendMock = computed(() => ({
   backgroundColor: 'transparent',
   tooltip: {
     backgroundColor: '#0f1629',
@@ -39,7 +41,7 @@ const trend = computed(() => ({
   ],
 }));
 
-const typePie = computed(() => ({
+const typePieMock = computed(() => ({
   backgroundColor: 'transparent',
   tooltip: { trigger: 'item', backgroundColor: '#0f1629', borderColor: '#c9a227', textStyle: { color: '#e8edf5' } },
   series: [
@@ -64,13 +66,104 @@ const doExport = () => {
   showExport.value = false;
 };
 
-const apiTab = ref<'ov' | 'tr' | 'tu'>('ov');
+const apiTab = ref('ov');
 const apiLoading = ref(false);
 const syncLoading = ref(false);
 const apiErr = ref('');
 const overviewJson = ref('');
 const trendJson = ref('');
 const topUsersJson = ref('');
+const overviewEnv = ref<ApiEnvelope<unknown> | null>(null);
+const trendEnv = ref<ApiEnvelope<unknown> | null>(null);
+const topUsersEnv = ref<ApiEnvelope<unknown> | null>(null);
+
+const defaultKpis = [
+  { t: '今日笔数', v: '6,483' },
+  { t: '本周笔数', v: '45,922' },
+  { t: '本月笔数', v: '186,302' },
+];
+
+const displayKpis = computed(() => {
+  const parsed = overviewEnv.value ? parseOverviewKpis(overviewEnv.value) : null;
+  if (parsed && parsed.length) {
+    return parsed.map((k) => ({ t: k.label, v: k.value }));
+  }
+  return defaultKpis;
+});
+
+const trendChartOption = computed(() => {
+  const parsed = trendEnv.value ? parseTrendLineSeries(trendEnv.value) : null;
+  if (parsed && parsed.categories.length) {
+    return {
+      backgroundColor: 'transparent',
+      tooltip: {
+        backgroundColor: '#0f1629',
+        borderColor: '#c9a227',
+        textStyle: { color: '#e8edf5' },
+        trigger: 'axis',
+      },
+      grid: { left: 48, right: 20, top: 24, bottom: 28 },
+      xAxis: {
+        type: 'category',
+        data: parsed.categories,
+        axisLine: { lineStyle: { color: '#1e2d4a' } },
+        axisLabel: { color: '#9aacca', fontSize: 11 },
+      },
+      yAxis: {
+        type: 'value',
+        splitLine: { lineStyle: { color: '#1e2d4a', type: 'dashed' } },
+        axisLabel: { color: '#7a8ba8', fontSize: 11 },
+      },
+      series: [
+        {
+          type: 'line',
+          smooth: true,
+          data: parsed.values,
+          lineStyle: { color: '#c9a227', width: 2 },
+          areaStyle: { color: 'rgba(201,162,39,0.08)' },
+        },
+      ],
+    };
+  }
+  return trendMock.value;
+});
+
+const pieChartOption = computed(() => {
+  let slices =
+    (topUsersEnv.value ? parsePieFromTopUsers(topUsersEnv.value) : null) ||
+    (overviewEnv.value ? parsePieFromOverview(overviewEnv.value) : null);
+  if (slices && slices.length) {
+    const colors = ['#c9a227', '#00d4b1', '#5b7cff', '#9aacca', '#e85d6f', '#6b9fff', '#788c5d', '#b0aea5'];
+    return {
+      backgroundColor: 'transparent',
+      tooltip: { trigger: 'item', backgroundColor: '#0f1629', borderColor: '#c9a227', textStyle: { color: '#e8edf5' } },
+      series: [
+        {
+          type: 'pie',
+          radius: ['40%', '65%'],
+          data: slices.map((s, i) => ({
+            value: s.value,
+            name: s.name,
+            itemStyle: { color: colors[i % colors.length] },
+          })),
+        },
+      ],
+    };
+  }
+  return typePieMock.value;
+});
+
+const trendHint = computed(() =>
+  trendEnv.value && parseTrendLineSeries(trendEnv.value) ? '接口 stats/trend' : 'Mock 随机波动'
+);
+
+const pieHint = computed(() =>
+  topUsersEnv.value && parsePieFromTopUsers(topUsersEnv.value)
+    ? '接口 top-users'
+    : overviewEnv.value && parsePieFromOverview(overviewEnv.value)
+      ? '接口 overview 占比'
+      : 'Mock 演示'
+);
 
 async function loadTxStats() {
   apiLoading.value = true;
@@ -81,11 +174,17 @@ async function loadTxStats() {
       adminTransactionApi.statsTrend({ days: 7 }),
       adminTransactionApi.statsTopUsers({ days: 7, limit: 10, sort_by: 'amount' }),
     ]);
+    overviewEnv.value = o;
+    trendEnv.value = t;
+    topUsersEnv.value = u;
     overviewJson.value = JSON.stringify(o, null, 2);
     trendJson.value = JSON.stringify(t, null, 2);
     topUsersJson.value = JSON.stringify(u, null, 2);
   } catch (e) {
     apiErr.value = e instanceof ApiError ? e.message : String(e);
+    overviewEnv.value = null;
+    trendEnv.value = null;
+    topUsersEnv.value = null;
   } finally {
     apiLoading.value = false;
   }
@@ -122,11 +221,7 @@ onMounted(() => {
     </div>
 
     <div class="kpi-row">
-      <el-card v-for="(x, i) in [
-        { t: '今日笔数', v: '6,483' },
-        { t: '本周笔数', v: '45,922' },
-        { t: '本月笔数', v: '186,302' },
-      ]" :key="i" class="kpi" shadow="never">
+      <el-card v-for="(x, i) in displayKpis" :key="i" class="kpi" shadow="never">
         <div class="kpi-label">{{ x.t }}</div>
         <div class="kpi-val gold font-mono">{{ x.v }}</div>
       </el-card>
@@ -136,19 +231,20 @@ onMounted(() => {
       <el-card class="chart-wide" shadow="never">
         <template #header>
           <div class="card-h">
-            <span>24h 转账趋势</span>
-            <span class="hint font-mono">Mock 随机波动</span>
+            <span>转账趋势</span>
+            <span class="hint font-mono">{{ trendHint }}</span>
           </div>
         </template>
-        <EChart :option="trend" height="300px" />
+        <EChart :option="trendChartOption" height="300px" />
       </el-card>
       <el-card class="chart-side" shadow="never">
         <template #header>
           <div class="card-h">
-            <span>类型占比</span>
+            <span>占比 / 排行</span>
+            <span class="hint font-mono">{{ pieHint }}</span>
           </div>
         </template>
-        <EChart :option="typePie" height="300px" />
+        <EChart :option="pieChartOption" height="300px" />
       </el-card>
     </div>
 
@@ -163,7 +259,7 @@ onMounted(() => {
         </div>
       </template>
       <p class="api-note font-mono">
-        overview / trend / top-users / sync；上方图表仍为本地 Mock，待后端字段稳定后可绑定图表。
+        与文档 Admin Transaction 一致；KPI/折线/饼图在能解析 data 时使用接口值，否则回退为占位 Mock。
       </p>
       <el-alert v-if="apiErr" :title="apiErr" type="error" class="api-err" :closable="false" />
       <el-tabs v-model="apiTab">

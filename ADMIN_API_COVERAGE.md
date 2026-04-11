@@ -9,6 +9,7 @@
 | `VITE_API_BASE_URL` | 默认 `/api`：开发时由 Vite 代理到 `https://api.celing.cc` |
 | `VITE_USE_MOCK_ADMIN_AUTH` | `true` 时不请求登录接口，写入本地 mock token |
 | `VITE_USE_ADMIN_MOCK_DATA` | `true` 时转账明细、管理员列表仍用内置 Mock 表 |
+| `VITE_USE_END_USER_MOCK` | `true` 时用户管理/详情仍用本地 userDirectory Mock |
 
 ## 接口清单与 UI 状态
 
@@ -37,9 +38,21 @@
 | GET `/admin/transaction/stats/top-users` | 同上 |
 | POST `/admin/transaction/sync` | 转账统计页「POST 同步」 |
 
+### Admin End User（前台用户，文档截图「Admin End User (4)」）
+
+| 接口 | 前端 |
+|------|------|
+| GET `/admin/user/list` | 用户管理列表（默认对接）；`keyword`、`status`(1/0) |
+| GET `/admin/user/detail` | 用户详情页 `接口字段` |
+| POST `/admin/user/status` | 详情页启用/禁用 |
+| POST `/admin/user/password` | 详情页重置密码 |
+
+转账明细支持 URL 查询参数 `?user_id=`，对应文档中的 `user_id` 筛选。
+
 ## 仍为 Mock / 未对接后端的模块
 
-- 总览仪表盘、用户管理、邀请码、资产、合约、风控、节点监控、基础配置、操作日志等页面：无文档中对应 `/admin/*` 时仍为原 Mock 或占位。
+- 总览仪表盘、邀请码、资产、合约、风控、节点监控、基础配置、操作日志等页面：无文档中对应 `/admin/*` 时仍为原 Mock 或占位。
+- 用户管理：设置 `VITE_USE_END_USER_MOCK=true` 时回到本地 Mock；否则走 `/admin/user/*`。
 - 管理员「添加/编辑表单」「权限配置」树：仍为本地 Mock；与真实 `resource` / `role` 绑定需后续对接。
 - 转账统计页顶部 KPI 与 ECharts：仍为 Mock；仅底部展示接口原始 JSON。
 

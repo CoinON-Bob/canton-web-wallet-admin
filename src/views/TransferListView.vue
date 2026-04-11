@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, watch, onMounted } from 'vue';
+import { useRoute } from 'vue-router';
 import { transfers, formatHash, formatNumber, formatAddress } from '../api/mock';
 import StatusBadge from '../components/common/StatusBadge.vue';
 import { CopyDocument, Search } from '@element-plus/icons-vue';
@@ -9,6 +10,15 @@ import { extractPageRows, pickColumns } from '../api/listUtils';
 import { ApiError } from '../api/http';
 
 const useMock = import.meta.env.VITE_USE_ADMIN_MOCK_DATA === 'true';
+
+const route = useRoute();
+const filterUserId = computed(() => {
+  const q = route.query.user_id;
+  const s = Array.isArray(q) ? q[0] : q;
+  if (s == null || s === '') return undefined;
+  const n = Number(s);
+  return Number.isFinite(n) ? n : undefined;
+});
 
 const searchQuery = ref('');
 const statusFilter = ref('');
@@ -66,6 +76,7 @@ async function fetchLiveList() {
     const res = await adminTransactionApi.list({
       page: currentPage.value,
       page_size: pageSize.value,
+      user_id: filterUserId.value,
       keyword: searchQuery.value.trim() || undefined,
       include_raw: 0,
     });
@@ -99,6 +110,16 @@ watch([currentPage, pageSize], () => {
   if (!useMock) void fetchLiveList();
 });
 
+watch(
+  () => route.query.user_id,
+  () => {
+    if (!useMock) {
+      currentPage.value = 1;
+      void fetchLiveList();
+    }
+  }
+);
+
 watch(searchQuery, () => {
   if (useMock) return;
   if (searchDebounce) clearTimeout(searchDebounce);
@@ -122,7 +143,14 @@ const totalRecords = computed(() => (useMock ? filteredTransfers.value.length : 
     </div>
 
     <el-alert
-      v-if="!useMock"
+      v-if="!useMock && filterUserId != null"
+      type="warning"
+      :closable="false"
+      class="live-banner"
+      :title="`已按 user_id=${filterUserId} 筛选（与文档一致）。清除地址栏 query 可查看全量。`"
+    />
+    <el-alert
+      v-else-if="!useMock"
       type="info"
       :closable="false"
       class="live-banner"

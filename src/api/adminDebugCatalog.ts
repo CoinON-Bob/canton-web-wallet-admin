@@ -240,4 +240,36 @@ export const ADMIN_DEBUG_ENDPOINTS: DebugEndpoint[] = [
       2
     ),
   },
+  {
+    id: 'end-user-list',
+    group: 'Admin End User',
+    label: '前台用户列表',
+    method: 'GET',
+    path: '/admin/user/list',
+    query: { page: '1', page_size: '10', keyword: '', status: '' },
+  },
+  {
+    id: 'end-user-detail',
+    group: 'Admin End User',
+    label: '前台用户详情',
+    method: 'GET',
+    path: '/admin/user/detail',
+    query: { id: '1' },
+  },
+  {
+    id: 'end-user-status',
+    group: 'Admin End User',
+    label: '更新前台用户状态',
+    method: 'POST',
+    path: '/admin/user/status',
+    body: JSON.stringify({ id: 0, status: 0 }, null, 2),
+  },
+  {
+    id: 'end-user-password',
+    group: 'Admin End User',
+    label: '重置前台用户密码',
+    method: 'POST',
+    path: '/admin/user/password',
+    body: JSON.stringify({ id: 0, password: '' }, null, 2),
+  },
 ];

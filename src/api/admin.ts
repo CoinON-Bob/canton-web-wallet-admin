@@ -55,6 +55,15 @@ export const adminResourceApi = {
   delete: (body: { id: number }) => requestEnvelope('POST', '/admin/resource/delete', { body }),
 };
 
+/** 前台用户（文档 Admin End User，与后台 admin-user 区分） */
+export const adminEndUserApi = {
+  list: (q: { page?: number; page_size?: number; keyword?: string; status?: number }) =>
+    requestEnvelope('GET', `/admin/user/list${buildQuery(q)}`),
+  detail: (id: number) => requestEnvelope('GET', `/admin/user/detail${buildQuery({ id })}`),
+  updateStatus: (body: { id: number; status: number }) => requestEnvelope('POST', '/admin/user/status', { body }),
+  updatePassword: (body: { id: number; password: string }) => requestEnvelope('POST', '/admin/user/password', { body }),
+};
+
 export const adminTransactionApi = {
   list: (q: {
     page?: number;
