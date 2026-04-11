@@ -38,6 +38,8 @@
 | GET `/admin/transaction/stats/top-users` | 同上 |
 | POST `/admin/transaction/sync` | 转账统计页「POST 同步」 |
 
+**stats/* 与图表：**`src/api/txStatsChart.ts` 负责把 `overview` / `trend` / `top-users` 的 `data` 解析为 KPI、折线、饼图（支持 `data` 再包一层、`summary`、并行 `dates`+`counts`、`top_users` 数组等）。统计页「接口数据」卡片上会显示各块是否已绑定；若仍为 Mock，请对照同页 JSON 扩展该文件的字段映射。
+
 ### Admin End User（前台用户，文档截图「Admin End User (4)」）
 
 | 接口 | 前端 |

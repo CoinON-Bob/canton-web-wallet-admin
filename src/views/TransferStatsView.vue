@@ -6,7 +6,13 @@ import { ElMessage } from 'element-plus';
 import { adminTransactionApi } from '../api/admin';
 import { ApiError } from '../api/http';
 import type { ApiEnvelope } from '../api/http';
-import { parseOverviewKpis, parsePieFromOverview, parsePieFromTopUsers, parseTrendLineSeries } from '../api/txStatsChart';
+import {
+  describeStatsBinding,
+  parseOverviewKpis,
+  parsePieFromOverview,
+  parsePieFromTopUsers,
+  parseTrendLineSeries,
+} from '../api/txStatsChart';
 
 const router = useRouter();
 
@@ -165,6 +171,21 @@ const pieHint = computed(() =>
       : 'Mock 演示'
 );
 
+const bindingLine = computed(() => {
+  const b = describeStatsBinding({
+    overview: overviewEnv.value,
+    trend: trendEnv.value,
+    topUsers: topUsersEnv.value,
+  });
+  return [
+    `KPI ${b.kpi ? '已绑定接口' : '占位 Mock'}`,
+    `趋势 ${b.trend ? '已绑定 stats/trend' : '占位 Mock'}`,
+    `饼图 ${
+      b.pie ? `已绑定 (${b.pieSource === 'top-users' ? 'top-users' : 'overview'})` : '占位 Mock'
+    }`,
+  ].join(' · ');
+});
+
 async function loadTxStats() {
   apiLoading.value = true;
   apiErr.value = '';
@@ -259,7 +280,8 @@ onMounted(() => {
         </div>
       </template>
       <p class="api-note font-mono">
-        与文档 Admin Transaction 一致；KPI/折线/饼图在能解析 data 时使用接口值，否则回退为占位 Mock。
+        {{ bindingLine }}。stats/* 需登录后返回；解析规则见
+        <code class="code-ref">src/api/txStatsChart.ts</code>（多策略匹配 data / summary / 并行数组等）。对照下方原始 JSON 若仍不匹配，把样例发给前端以收窄字段。
       </p>
       <el-alert v-if="apiErr" :title="apiErr" type="error" class="api-err" :closable="false" />
       <el-tabs v-model="apiTab">
@@ -401,5 +423,11 @@ onMounted(() => {
   line-height: 1.45;
   white-space: pre-wrap;
   word-break: break-word;
+}
+
+.code-ref {
+  font-size: 10px;
+  color: var(--gold);
+  padding: 0 4px;
 }
 </style>
