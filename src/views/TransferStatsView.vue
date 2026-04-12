@@ -8,6 +8,7 @@ import { ApiError } from '../api/http';
 import type { ApiEnvelope } from '../api/http';
 import {
   describeStatsBinding,
+  overviewKpisAllNumericZero,
   parseOverviewKpis,
   parsePieFromOverview,
   parsePieFromTopUsers,
@@ -83,18 +84,37 @@ const overviewEnv = ref<ApiEnvelope<unknown> | null>(null);
 const trendEnv = ref<ApiEnvelope<unknown> | null>(null);
 const topUsersEnv = ref<ApiEnvelope<unknown> | null>(null);
 
-const defaultKpis = [
-  { t: '今日笔数', v: '6,483' },
-  { t: '本周笔数', v: '45,922' },
-  { t: '本月笔数', v: '186,302' },
-];
-
-const displayKpis = computed(() => {
+const displayKpis = computed((): { t: string; v: string }[] => {
+  if (apiLoading.value && !overviewEnv.value) {
+    return [
+      { t: '加载中', v: '—' },
+      { t: '加载中', v: '—' },
+      { t: '加载中', v: '—' },
+    ];
+  }
   const parsed = overviewEnv.value ? parseOverviewKpis(overviewEnv.value) : null;
   if (parsed && parsed.length) {
-    return parsed.map((k) => ({ t: k.label, v: k.value }));
+    const out = parsed.map((k) => ({ t: k.label, v: k.value }));
+    while (out.length < 3) out.push({ t: '—', v: '—' });
+    return out.slice(0, 3);
   }
-  return defaultKpis;
+  if (overviewEnv.value) {
+    return [
+      { t: '概览 KPI', v: '未匹配到数值字段' },
+      { t: '—', v: '—' },
+      { t: '—', v: '—' },
+    ];
+  }
+  return [
+    { t: '统计指标', v: '—' },
+    { t: '—', v: '—' },
+    { t: '—', v: '—' },
+  ];
+});
+
+const showZeroDataHint = computed(() => {
+  if (!overviewEnv.value || apiErr.value) return false;
+  return overviewKpisAllNumericZero(overviewEnv.value);
 });
 
 const trendChartOption = computed(() => {
@@ -248,6 +268,14 @@ onMounted(() => {
       </el-card>
     </div>
 
+    <el-alert
+      v-if="showZeroDataHint"
+      type="info"
+      :closable="false"
+      class="zero-hint"
+      title="概览接口返回的笔数均为 0。若链上实际有交易，可先点击下方「同步链上数据」，或请后端确认统计入库与定时任务。"
+    />
+
     <div class="charts-grid">
       <el-card class="chart-wide" shadow="never">
         <template #header>
@@ -272,29 +300,30 @@ onMounted(() => {
     <el-card shadow="never" class="api-card">
       <template #header>
         <div class="card-h">
-          <span>接口数据（文档 Admin Transaction）</span>
+          <span>数据同步与明细</span>
           <div class="api-actions">
-            <el-button size="small" :loading="apiLoading" @click="loadTxStats">刷新 JSON</el-button>
-            <el-button size="small" type="primary" :loading="syncLoading" @click="runSync">POST 同步</el-button>
+            <el-button size="small" :loading="apiLoading" @click="loadTxStats">刷新统计</el-button>
+            <el-button size="small" type="primary" :loading="syncLoading" @click="runSync">同步链上数据</el-button>
           </div>
         </div>
       </template>
-      <p class="api-note font-mono">
-        {{ bindingLine }}。stats/* 需登录后返回；解析规则见
-        <code class="code-ref">src/api/txStatsChart.ts</code>（多策略匹配 data / summary / 并行数组等）。对照下方原始 JSON 若仍不匹配，把样例发给前端以收窄字段。
-      </p>
+      <p class="api-note font-mono">{{ bindingLine }}</p>
       <el-alert v-if="apiErr" :title="apiErr" type="error" class="api-err" :closable="false" />
-      <el-tabs v-model="apiTab">
-        <el-tab-pane label="stats/overview" name="ov">
-          <pre class="json-block font-mono">{{ overviewJson || '—' }}</pre>
-        </el-tab-pane>
-        <el-tab-pane label="stats/trend" name="tr">
-          <pre class="json-block font-mono">{{ trendJson || '—' }}</pre>
-        </el-tab-pane>
-        <el-tab-pane label="stats/top-users" name="tu">
-          <pre class="json-block font-mono">{{ topUsersJson || '—' }}</pre>
-        </el-tab-pane>
-      </el-tabs>
+      <el-collapse class="api-raw-fold">
+        <el-collapse-item title="原始 JSON（排障 / 对字段）" name="raw">
+          <el-tabs v-model="apiTab">
+            <el-tab-pane label="overview" name="ov">
+              <pre class="json-block font-mono">{{ overviewJson || '—' }}</pre>
+            </el-tab-pane>
+            <el-tab-pane label="trend" name="tr">
+              <pre class="json-block font-mono">{{ trendJson || '—' }}</pre>
+            </el-tab-pane>
+            <el-tab-pane label="top-users" name="tu">
+              <pre class="json-block font-mono">{{ topUsersJson || '—' }}</pre>
+            </el-tab-pane>
+          </el-tabs>
+        </el-collapse-item>
+      </el-collapse>
     </el-card>
 
     <el-dialog v-model="showExport" title="导出报表" width="400px" destroy-on-close>
@@ -404,11 +433,24 @@ onMounted(() => {
   gap: 8px;
 }
 
+.zero-hint {
+  margin-bottom: 16px;
+}
+
 .api-note {
   margin: 0 0 12px;
   font-size: 11px;
   color: var(--text-dim);
   line-height: 1.5;
+}
+
+.api-raw-fold {
+  --el-collapse-border-color: var(--border);
+}
+
+.api-raw-fold :deep(.el-collapse-item__header) {
+  font-size: 12px;
+  color: var(--text-dim);
 }
 
 .api-err {
@@ -425,9 +467,4 @@ onMounted(() => {
   word-break: break-word;
 }
 
-.code-ref {
-  font-size: 10px;
-  color: var(--gold);
-  padding: 0 4px;
-}
 </style>

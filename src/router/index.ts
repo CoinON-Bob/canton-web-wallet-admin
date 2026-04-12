@@ -114,7 +114,7 @@ const routes: RouteRecordRaw[] = [
           {
             path: 'account-api',
             name: 'settings-account-api',
-            meta: { title: '账户接口' },
+            meta: { title: '当前账户' },
             component: () => import('../views/settings/SettingsAccountApiView.vue'),
           },
           {

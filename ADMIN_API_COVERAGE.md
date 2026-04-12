@@ -20,7 +20,7 @@
 | GET `/admin/public` | 有 | API 调试 |
 | POST `/admin/login` | 有 | 登录页 |
 | POST `/admin/logout` | 有 | 退出（随登录态） |
-| GET `/admin/account/profile` | 有 | 系统配置 → 账户接口 |
+| GET `/admin/account/profile` | 有 | 系统配置 → 当前账户 |
 | GET `/admin/account/menus` | 有 | 同上 |
 | GET `/admin/account/permissions` | 有 | 同上 |
 | GET `/admin/admin-user/list` | 有 | 管理员列表（非 Mock） |

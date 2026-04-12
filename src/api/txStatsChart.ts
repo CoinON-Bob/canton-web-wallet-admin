@@ -38,6 +38,10 @@ function firstArray(...candidates: unknown[]): unknown[] | null {
 }
 
 function num(v: unknown): number {
+  if (typeof v === 'string' && v.trim() !== '') {
+    const n = Number(v.trim().replace(/,/g, ''));
+    return Number.isFinite(n) ? n : 0;
+  }
   const n = Number(v);
   return Number.isFinite(n) ? n : 0;
 }
@@ -67,12 +71,16 @@ function extractTrendPoints(root: unknown): Record<string, unknown>[] | null {
     o.points,
     o.series_points,
     o.chart_data,
+    o.hourly,
+    o.hourly_stats,
+    o.time_series,
     o.items,
     o.list,
     o.rows,
     dig(o, ['trend', 'points']),
     dig(o, ['chart', 'points']),
     dig(o, ['summary', 'daily']),
+    dig(o, ['statistics', 'daily']),
     isPlainObject(o.trend) ? (o.trend as Record<string, unknown>).points : undefined
   );
 
@@ -102,6 +110,8 @@ function tryParallelDateValueArrays(o: Record<string, unknown>): { categories: s
     'totals',
     'tx_counts',
     'transaction_counts',
+    'volumes',
+    'nums',
     'y',
   ];
   let dates: unknown;
@@ -118,11 +128,13 @@ function tryParallelDateValueArrays(o: Record<string, unknown>): { categories: s
       break;
     }
   }
-  if (!Array.isArray(dates) || !Array.isArray(vals) || dates.length !== vals.length || !dates.length) {
+  if (!Array.isArray(dates) || !Array.isArray(vals) || !dates.length) {
     return null;
   }
-  const categories = dates.map((x) => str(x));
-  const values = vals.map((x) => num(x));
+  const n = Math.min(dates.length, vals.length);
+  if (n < 1) return null;
+  const categories = dates.slice(0, n).map((x) => str(x));
+  const values = vals.slice(0, n).map((x) => num(x));
   return { categories, values };
 }
 
@@ -152,6 +164,21 @@ export function parseTrendLineSeries(envelope: ApiEnvelope<unknown>): { categori
 
     const cj = tryChartJsStyle(payload);
     if (cj) return cj;
+
+    const seriesArr = payload.series;
+    if (Array.isArray(seriesArr) && seriesArr.length) {
+      const first = seriesArr[0];
+      if (isPlainObject(first)) {
+        const pdata = first.data;
+        const lbl = payload.labels ?? payload.categories ?? payload.xAxis;
+        if (Array.isArray(pdata) && Array.isArray(lbl) && pdata.length === lbl.length) {
+          return {
+            categories: lbl.map((x) => str(x)),
+            values: pdata.map((x) => num(x)),
+          };
+        }
+      }
+    }
   }
 
   const points = extractTrendPoints(payload);
@@ -183,7 +210,9 @@ export function parseTrendLineSeries(envelope: ApiEnvelope<unknown>): { categori
         r.total ??
         r.volume ??
         r.sum ??
-        r.y
+        r.y ??
+        r.tx_amount ??
+        r.net_amount
     );
     categories.push(cat);
     values.push(v);
@@ -211,7 +240,10 @@ function extractUserRankRows(root: unknown): Record<string, unknown>[] | null {
     o.list,
     o.items,
     o.users,
-    dig(o, ['data', 'list'])
+    o.result,
+    o.records,
+    dig(o, ['data', 'list']),
+    dig(o, ['data', 'items'])
   );
   if (!arr || !arr.every((x) => x && typeof x === 'object')) return null;
   return arr as Record<string, unknown>[];
@@ -224,17 +256,17 @@ export function parsePieFromTopUsers(envelope: ApiEnvelope<unknown>): PieSlice[]
 
   const slices: PieSlice[] = [];
   for (const r of rows.slice(0, 12)) {
-    const name = str(
+    const rawLabel =
       r.email ??
-        r.user_email ??
-        r.display_name ??
-        r.nickname ??
-        r.party_id ??
-        r.party ??
-        r.user_id ??
-        r.id ??
-        '—'
-    ).slice(0, 40);
+      r.user_email ??
+      r.username ??
+      r.display_name ??
+      r.nickname ??
+      r.party_id ??
+      r.party ??
+      r.user_id ??
+      r.id;
+    const name = str(rawLabel != null && rawLabel !== '' ? rawLabel : `用户 ${r.user_id ?? r.id ?? '?'}`).slice(0, 40);
     const value = num(
       r.amount ??
         r.total_amount ??
@@ -246,7 +278,7 @@ export function parsePieFromTopUsers(envelope: ApiEnvelope<unknown>): PieSlice[]
         r.sum ??
         r.value
     );
-    if (name && name !== '—') slices.push({ name, value: Math.max(0, value) });
+    slices.push({ name, value: Math.max(0, value) });
   }
   return slices.length ? slices : null;
 }
@@ -285,21 +317,30 @@ export function parsePieFromOverview(envelope: ApiEnvelope<unknown>): PieSlice[]
 export type KpiItem = { label: string; value: string };
 
 function labelForScalarKey(k: string): string {
+  const nk = k.replace(/_/g, '').toLowerCase();
   const map: Record<string, string> = {
     today_count: '今日笔数',
     today_tx_count: '今日笔数',
+    todaycount: '今日笔数',
     count_today: '今日笔数',
     tx_today: '今日笔数',
+    today: '今日笔数',
     week_count: '近 7 日笔数',
     last_7d_count: '近 7 日笔数',
     count_7d: '近 7 日笔数',
     days_7_count: '近 7 日笔数',
+    weekcount: '近 7 日笔数',
+    week: '近 7 日笔数',
     month_count: '近 30 日笔数',
     last_30d_count: '近 30 日笔数',
     count_30d: '近 30 日笔数',
+    monthcount: '近 30 日笔数',
+    month: '近 30 日笔数',
     total_count: '总笔数',
     tx_count: '总笔数',
     transaction_count: '交易笔数',
+    totalcount: '总笔数',
+    total: '合计笔数',
     total_amount: '总金额',
     amount_sum: '金额合计',
     sum_amount: '金额合计',
@@ -307,23 +348,59 @@ function labelForScalarKey(k: string): string {
     latest_sync_at: '最近同步',
   };
   if (map[k]) return map[k];
-  if (k.includes('count')) return k.replace(/_/g, ' ');
+  if (map[nk]) return map[nk];
+  if (k.includes('count') || nk.includes('count')) return k.replace(/_/g, ' ');
   if (k.includes('amount') || k.includes('sum') || k.includes('volume')) return k.replace(/_/g, ' ');
   return k;
 }
 
 function pickScalar(o: Record<string, unknown>, keys: string[]): KpiItem | null {
-  for (const k of keys) {
-    if (!(k in o)) continue;
-    const v = o[k];
+  const tryPair = (key: string, v: unknown): KpiItem | null => {
+    if (v === null || v === undefined) return null;
+    if (typeof v === 'boolean') return null;
+    if (typeof v === 'object') return null;
     if (typeof v === 'number' && Number.isFinite(v)) {
-      return { label: labelForScalarKey(k), value: v.toLocaleString() };
+      return { label: labelForScalarKey(key), value: v.toLocaleString() };
     }
     if (typeof v === 'string' && v.trim() !== '') {
-      return { label: labelForScalarKey(k), value: v };
+      const n = num(v);
+      if (Number.isFinite(n) && String(v).trim() !== '') {
+        return { label: labelForScalarKey(key), value: n.toLocaleString() };
+      }
+      return { label: labelForScalarKey(key), value: v };
+    }
+    return null;
+  };
+
+  for (const k of keys) {
+    if (k in o) {
+      const it = tryPair(k, o[k]);
+      if (it) return it;
+    }
+  }
+  const lowerToOrig = new Map<string, string>();
+  for (const k of Object.keys(o)) {
+    lowerToOrig.set(k.toLowerCase(), k);
+  }
+  for (const k of keys) {
+    const orig = lowerToOrig.get(k.toLowerCase());
+    if (orig) {
+      const it = tryPair(orig, o[orig]);
+      if (it) return it;
     }
   }
   return null;
+}
+
+/** 合并 overview 根对象与常见子对象，避免统计落在 summary/statistics 内解析不到 */
+function gatherKpiSources(payload: Record<string, unknown>): Record<string, unknown>[] {
+  const list: Record<string, unknown>[] = [payload];
+  const nestedKeys = ['summary', 'stats', 'statistics', 'overview', 'result', 'detail', 'data'];
+  for (const k of nestedKeys) {
+    const v = payload[k];
+    if (isPlainObject(v)) list.push(v as Record<string, unknown>);
+  }
+  return list;
 }
 
 /** 从 overview 根对象或 summary 子对象取 KPI */
@@ -331,15 +408,44 @@ export function parseOverviewKpis(envelope: ApiEnvelope<unknown>): KpiItem[] | n
   const payload = getApiDataPayload(envelope);
   if (!isPlainObject(payload)) return null;
 
-  const summary = isPlainObject(payload.summary) ? (payload.summary as Record<string, unknown>) : null;
-  const sources: Record<string, unknown>[] = [payload];
-  if (summary) sources.unshift(summary);
+  const sources = gatherKpiSources(payload);
 
   const items: KpiItem[] = [];
-  const tryOrder: { keys: string[]; fallbackLabel?: string }[] = [
-    { keys: ['today_count', 'today_tx_count', 'count_today', 'tx_today'] },
-    { keys: ['week_count', 'last_7d_count', 'count_7d', 'days_7_count'] },
-    { keys: ['month_count', 'last_30d_count', 'count_30d'] },
+  const tryOrder: { keys: string[] }[] = [
+    {
+      keys: [
+        'today_count',
+        'today_tx_count',
+        'count_today',
+        'tx_today',
+        'TodayCount',
+        'todayCount',
+        'today',
+      ],
+    },
+    {
+      keys: [
+        'week_count',
+        'last_7d_count',
+        'count_7d',
+        'days_7_count',
+        'WeekCount',
+        'weekCount',
+        'week',
+        'last7d',
+      ],
+    },
+    {
+      keys: [
+        'month_count',
+        'last_30d_count',
+        'count_30d',
+        'MonthCount',
+        'monthCount',
+        'month',
+        'last30d',
+      ],
+    },
   ];
 
   for (const src of sources) {
@@ -352,8 +458,15 @@ export function parseOverviewKpis(envelope: ApiEnvelope<unknown>): KpiItem[] | n
 
   if (items.length < 3) {
     for (const src of sources) {
-      const tc = pickScalar(src, ['total_count', 'tx_count', 'transaction_count']);
-      const ta = pickScalar(src, ['total_amount', 'amount_sum', 'sum_amount', 'volume_total']);
+      const tc = pickScalar(src, [
+        'total_count',
+        'tx_count',
+        'transaction_count',
+        'TotalCount',
+        'total',
+        'total_tx',
+      ]);
+      const ta = pickScalar(src, ['total_amount', 'amount_sum', 'sum_amount', 'volume_total', 'TotalAmount', 'amount']);
       if (tc && !items.some((x) => x.label === tc.label)) items.push(tc);
       if (ta && !items.some((x) => x.label === ta.label)) items.push(ta);
       if (items.length >= 3) break;
@@ -361,16 +474,35 @@ export function parseOverviewKpis(envelope: ApiEnvelope<unknown>): KpiItem[] | n
   }
 
   if (!items.length) {
-    const flat = summary ?? payload;
-    const numericEntries = Object.entries(flat).filter(
-      ([, v]) => typeof v === 'number' && Number.isFinite(v as number)
-    );
-    for (const [k, v] of numericEntries.slice(0, 3)) {
-      items.push({ label: labelForScalarKey(k), value: (v as number).toLocaleString() });
+    for (const src of sources) {
+      const numericEntries = Object.entries(src).filter(([, v]) => {
+        if (typeof v === 'number' && Number.isFinite(v)) return true;
+        if (typeof v === 'string' && v.trim() !== '' && Number.isFinite(Number(v.replace(/,/g, '')))) return true;
+        return false;
+      });
+      const skip = new Set(['code', 'id', 'page', 'page_size', 'status']);
+      for (const [k, v] of numericEntries) {
+        if (skip.has(k.toLowerCase())) continue;
+        const val = num(v);
+        items.push({ label: labelForScalarKey(k), value: val.toLocaleString() });
+        if (items.length >= 6) break;
+      }
+      if (items.length) break;
     }
   }
 
   return items.length ? items.slice(0, 6) : null;
+}
+
+/** 若 KPI 已解析且展示值均为 0，用于提示是否需同步链上数据 */
+export function overviewKpisAllNumericZero(envelope: ApiEnvelope<unknown> | null): boolean {
+  if (!envelope) return false;
+  const items = parseOverviewKpis(envelope);
+  if (!items?.length) return false;
+  return items.every((it) => {
+    const n = Number(String(it.value).replace(/,/g, ''));
+    return Number.isFinite(n) && n === 0;
+  });
 }
 
 /** 供页面展示「解析是否命中」 */

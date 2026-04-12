@@ -9,7 +9,7 @@ const tabs = [
   { label: '基础配置', path: '/settings/general', icon: Setting },
   { label: '管理员', path: '/settings/admins', icon: User, match: /^\/settings\/admins/ },
   { label: '角色与资源', path: '/settings/roles-resources', icon: Key },
-  { label: '账户接口', path: '/settings/account-api', icon: Link },
+  { label: '当前账户', path: '/settings/account-api', icon: Link },
   { label: 'API 调试', path: '/settings/api-debug', icon: Link },
   { label: '操作日志', path: '/settings/logs', icon: Document },
 ];
