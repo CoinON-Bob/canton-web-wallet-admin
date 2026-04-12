@@ -28,3 +28,41 @@ export function pickColumns(rows: Record<string, unknown>[], max = 10): string[]
   }
   return [...keys].slice(0, max);
 }
+
+/** 角色下拉：兼容 list/options 等分页或数组结构 */
+export function extractRoleOptions(data: unknown): { label: string; value: number }[] {
+  const { rows } = extractPageRows(data);
+  const fromRows = rows
+    .map((r) => ({
+      label: String(r.name ?? r.code ?? r.title ?? `角色 #${r.id ?? ''}`),
+      value: Number(r.id),
+    }))
+    .filter((o) => Number.isFinite(o.value));
+  if (fromRows.length) return fromRows;
+  if (data && typeof data === 'object' && Array.isArray((data as Record<string, unknown>).options)) {
+    const opts = (data as Record<string, unknown>).options as Record<string, unknown>[];
+    return opts
+      .map((r) => ({
+        label: String(r.name ?? r.code ?? r.label ?? r.id),
+        value: Number(r.id ?? r.value),
+      }))
+      .filter((o) => Number.isFinite(o.value));
+  }
+  return [];
+}
+
+/** 单条详情：兼容 data / record / 一层嵌套 */
+export function extractDetailRecord(data: unknown, depth = 0): Record<string, unknown> | null {
+  if (depth > 4 || data == null) return null;
+  if (typeof data !== 'object') return null;
+  const d = data as Record<string, unknown>;
+  const hasId = d.id !== undefined && d.id !== null;
+  if (hasId && (d.username !== undefined || d.nickname !== undefined || d.login !== undefined)) {
+    return d;
+  }
+  const inner = d.data ?? d.record ?? d.detail ?? d.info;
+  if (inner && typeof inner === 'object' && !Array.isArray(inner)) {
+    return extractDetailRecord(inner, depth + 1);
+  }
+  return hasId ? d : null;
+}

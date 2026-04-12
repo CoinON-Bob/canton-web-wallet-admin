@@ -64,13 +64,19 @@ const goAdd = () => {
 };
 
 const goAddClick = () => {
-  if (useMock) goAdd();
-  else ElMessage.info('新增请用「API 调试」POST /admin/admin-user/save，或后续对接表单');
+  goAdd();
 };
 
 const goEditClick = (row: AdminAccount | Record<string, unknown>) => {
   if (useMock) goEdit(row as AdminAccount);
-  else ElMessage.info('编辑请用「API 调试」POST /admin/admin-user/save');
+  else {
+    const id = (row as Record<string, unknown>).id;
+    if (id === undefined || id === null) {
+      ElMessage.warning('缺少 id，无法编辑');
+      return;
+    }
+    router.push({ name: 'settings-admin-edit', params: { id: String(id) } });
+  }
 };
 
 function roleIdsPreview(row: Record<string, unknown>) {
@@ -149,7 +155,7 @@ function apiStatusLabel(row: Record<string, unknown>) {
       type="info"
       :closable="false"
       class="live-banner"
-      title="列表数据来自 GET /admin/admin-user/list。「配置权限」页仍为前端 Mock 树；线上请以 /admin/role/resource-ids 与资源树为准。"
+      title="列表来自 GET /admin/admin-user/list；新增/编辑对接 POST /admin/admin-user/save。「配置权限」页仍为 Mock 树；角色绑定请在本页编辑表单的 role_ids 或使用 API 调试。"
     />
 
     <el-card shadow="never" class="card">
