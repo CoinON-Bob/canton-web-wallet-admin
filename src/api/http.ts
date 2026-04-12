@@ -89,7 +89,16 @@ export async function requestEnvelope<T>(
 
   const j = json as ApiEnvelope | null;
   if (!res.ok) {
-    const msg = typeof j?.msg === 'string' ? j.msg : `HTTP ${res.status}`;
+    let msg = typeof j?.msg === 'string' ? j.msg : `HTTP ${res.status}`;
+    if (
+      res.status === 405 &&
+      getApiBaseUrl().replace(/\/$/, '') === '/api' &&
+      typeof window !== 'undefined' &&
+      window.location.origin &&
+      !url.startsWith('http')
+    ) {
+      msg += '（相对路径 /api 在部分托管上会被 SPA 重写；需在 vercel.json 等将 /api 反代到真实后端）';
+    }
     throw new ApiError(msg, { status: res.status, code: typeof j?.code === 'number' ? j.code : undefined });
   }
 
